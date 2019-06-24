@@ -3,7 +3,7 @@ package com.xmcc.common;
 import lombok.Getter;
 
 @Getter
-public enum OrderEnums {
+public enum OrderEnum {
     NEW(0,"新建订单"),
     FINSH(1,"已完成订单"),
     CANCEL(2,"已取消"),
@@ -13,7 +13,7 @@ public enum OrderEnums {
     AMOUNT_CHECK_ERROR(10000,"微信支付订单金额与数据库查询的不一致");
     private int code;
     private String msg;
-    OrderEnums(int code, String msg){
+    OrderEnum(int code, String msg){
         this.code = code;
         this.msg = msg;
     }

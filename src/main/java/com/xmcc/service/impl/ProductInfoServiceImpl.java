@@ -10,9 +10,11 @@ import com.xmcc.service.ProductCategoryService;
 import com.xmcc.service.ProductInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,16 +31,40 @@ public class ProductInfoServiceImpl implements ProductInfoService {
             return categoryServiceResult;//如果分类列表为空 直接返回了
         }
         //获得类目编号集合
-        List<Integer> categoryTypeList = categorydtoList.stream().map(categorydto -> categorydto.getCategoryType()).collect(Collectors.toList());
+        List<Integer> categoryTypeList = categorydtoList.stream()
+                .map(categorydto -> categorydto.getCategoryType())
+                .collect(Collectors.toList());
         //查询商品列表  这里商品上下架可以用枚举 方便扩展
         List<ProductInfo> productInfoList = productInfoRepository.findByProductStatusAndCategoryTypeIn(ResultEnums.PRODUCT_UP.getCode(), categoryTypeList);
         //多线程遍历 取出每个商品类目编号对应的 商品列表 设置进入类目中
-        List<ProductCategoryDto> finalResultList = categorydtoList.parallelStream().map(categorydto -> {
-                    categorydto.setProductInfoDtoList(productInfoList.stream().
-                    filter(productInfo -> productInfo.getCategoryType() == categorydto.getCategoryType()).map(productInfo ->
-                    ProductInfoDto.build(productInfo)).collect(Collectors.toList()));
+        List<ProductCategoryDto> finalResultList = categorydtoList.parallelStream()
+                .map(categorydto -> { categorydto.setProductInfoDtoList(productInfoList.stream()
+                .filter(productInfo -> productInfo.getCategoryType() == categorydto.getCategoryType())
+                .map(productInfo -> ProductInfoDto.build(productInfo)).collect(Collectors.toList()));
             return categorydto;
         }).collect(Collectors.toList());
         return ResultResponse.success(finalResultList);
+    }
+
+    @Override
+    public ResultResponse<ProductInfo> queryById(String productId) {
+        if(productId==null&&productId.equals("")){
+            return ResultResponse.fail(ResultEnums.FAIL.getMsg());
+        }
+        Optional<ProductInfo> byId = productInfoRepository.findById(productId);
+        if(!byId.isPresent()){
+            return  ResultResponse.fail(ResultEnums.FAIL.getMsg());
+        }
+        ProductInfo productInfo = byId.get();
+        if(productInfo.getProductStatus()==ResultEnums.PRODUCT_DOWN.getCode()){
+            return  ResultResponse.fail(ResultEnums.PRODUCT_DOWN.getMsg());
+        }
+          return  ResultResponse.success(productInfo);
+}
+
+    @Override
+    @Transactional
+    public void updateProduct(ProductInfo productInfo) {
+             productInfoRepository.save(productInfo);
     }
 }
